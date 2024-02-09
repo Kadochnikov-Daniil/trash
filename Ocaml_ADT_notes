@@ -1,0 +1,16 @@
+Ocaml+ADT
+
+opam switch init --bare **Не сработало**
+
+opam switch create SWITCHNAME --compiler=ocaml-variants.4.14.0+options,ocaml-option-flambda **Не сработало, сработало следующее**
+**opam switch create SWITCHNAME ocaml-variants.4.14.0+options ocaml-option-flambda**
+
+CTRL+D выйти из утопа
+
+https://cs3110.github.io/textbook/chapters/preface/install.html#install-opam **хороший учебник**
+
+#use "mycode.ml";; utop
+
+$ ocamlc -o hello.byte hello.ml
+
+dune exec ./hello.exe

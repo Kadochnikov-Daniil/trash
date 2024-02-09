@@ -1,0 +1,141 @@
+https://github.com/richfelker/musl-cross-make/blob/master/README.md
+ Там в readme написано как собрать
+
+компиляция
+../musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c -o musl.out
+musl-cross-make/output/bin/riscv64-linux-musl-gcc new_main.c
+
+___ФИНАЛЬНОЕ___
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c myMusl/build/lib/libc.a -o myMusl.out -static -O0
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c muslOriginal/build/lib/libc.a -o muslOriginal.out -static -O0
+
+musl-cross-make/output/bin/riscv64-linux-musl-gcc mainF.c myMusl/build/lib/libc.a -o myMuslF.out -static -O0
+musl-cross-make/output/bin/riscv64-linux-musl-gcc mainF.c muslOriginal/build/lib/libc.a -o muslOriginalF.out -static -O0
+
+riscv64-unknown-elf-objdump -d myMusl.out 
+riscv64-unknown-elf-objdump -d muslOriginal.out 
+
+file myMusl.out 
+file muslOriginal.out 
+
+qemu-riscv64 myMusl.out
+qemu-riscv64 muslOriginal.out
+
+qemu-riscv64 myMuslF.out
+qemu-riscv64 muslOriginalF.out
+
+diff myMusl.out muslOriginal.out
+
+
+ 
+qemu-riscv64 -L myMusl/build musl.out
+qemu-riscv64 -L muslOriginal/build musl.out 
+
+сборка
+mkdir build
+../configure --host=riscv64-linux-gnu
+make -j4
+make install DESTDIR='pwd'/root
+mv lib/libc.so  lib/ld-musl-riscv64.so.1
+mv lib/libc.a  lib/ld-musl-riscv64.a.1
+
+//qemu-riscv64 -L /usr/riscv64-linux-gnu a.out
+
+riscv64-unknown-elf-objdump -d musl.out 
+
+
+tryouts with rounding
+riscv64-linux-gnu-gcc mymain.c myfunc.s
+qemu-riscv64 -L /usr/riscv64-linux-gnu ./a.out
+
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c myfunc.S
+musl-cross-make/output/bin/riscv64-linux-musl-gcc mymain.c myfunc.S
+ qemu-riscv64 -L muslOriginal/build a.out 
+ 
+01000000000010010010.000111111011.01010100010001000010.110100011000 PI
+01111111111110000000.000000000000.00000000000000000000.000000000000 NaN
+01111111111100000000.000000000000.00000000000000000000.000000000000 Inf
+11111111111100000000.000000000000.00000000000000000000.000000000000 -inf
+011111111111
+00111111110011001010.110000001000.00110001001001101110.100101111000 0.224
+
+ - Проверить, что компилятор действительно генерирует вызовы функции sin() в коде.
+
+---ВОПРОС---
+1)Нужно ли чтобы была возможность скомпилировать с разными флагами -O1, -O2, -O3?
+
+Присваиваю результат в переменную result. С флагом -O0, функция sin вызывается, проверял в objdump.
+
+---Потенциальные варианты решения---
+1)переменная со словом volatile, но может исказить время, так как подразумевает, что переменная будет считываться из памяти каждый раз при обращении.
+2)Создать myfunc.c
+#include <math.h>
+
+double myFunction() {
+    return sin(0.5);
+}
+
+gcc -c myfunc.c -o myfunc.o -O0 //компилируем функцию
+
+gcc main.c myfunc.o -o myprogram -O3 //компилируем main и связываем с myfunc.o
+
+Таким образом ка бы можно будет
+
+ - Создать два статических исполняемых файла: один с оригинальной реализацией функции sin, второй с оптимизированной версией
+
+Компилирую теперь с флагом -static
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c myMusl/build/lib/libc.a -o myMusl.out -static -O0
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c muslOriginal/build/lib/libc.a -o muslOriginal.out -static -O0
+
+Так проверял, что statically linked
+file myMusl.out 
+file muslOriginal.out 
+
+Так запускал
+qemu-riscv64 myMusl.out
+qemu-riscv64 muslOriginal.out
+
+ - Убедиться, что CLOCK_MONOTONIC максимально точно считает время работы алгоритма.
+ 
+1)Изменил подход к рассчетам, раньше было n итераций, в каждой из которых выполнялись замеры синуса с -360 по 360. Сейчас внешний цикл это выбор угла, который считается n раз. Увеличил колличество итераций, если плата слабая, то может быть проблема, так как у меня на компьютере исполнения занимает 8-10 секунд(Возможно стоит уменьшить колличество операций. Но при этом результат стал более стабилен, меньше разброса в итоговом значении. Единственное, что не нравится, это что почему-то всегда первый подсчет значительно больше, чем остальные. Как вариант, если не пытаться понять почему так, можно его просто не учитывать в вычислении среднего времени.
+
+ - Исследовать реализации функции sin() в других библиотеках, таких как glibc, newlib и uclibc, для сравнительного анализа производительности и функциональности.
+
+Если я правильно понимаю, то решением этого пункта будет просто подготовить бинарники на каждую из этих библиотек, чтоб посчитать время работы функции sin в каждой из них? Во всяком случае я сейчас этим занимаюсь.
+ 
+#include <stdio.h>
+#include <math.h>
+#include <time.h>
+
+int main() {
+    int num_iterations = 1000000;  // Количество итераций для усреднения
+    double result;                // Результат функции синуса
+
+    struct timespec start, end;
+    long long total_elapsed_ns = 0;
+
+    for (int i = 0; i < num_iterations; i++) {
+        // Засекаем начальное время
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
+        // Вызываем функцию синуса (или любую другую функцию)
+        result = sin(0.5);
+
+        // Засекаем конечное время
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        // Вычисляем время выполнения в наносекундах
+        long long elapsed_ns = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);
+
+        // Суммируем время выполнения
+        total_elapsed_ns += elapsed_ns;
+    }
+
+    // Усредняем время выполнения
+    long long average_elapsed_ns = total_elapsed_ns / num_iterations;
+
+    printf("Среднее время выполнения: %lld наносекунд\n", average_elapsed_ns);
+
+    return 0;
+}

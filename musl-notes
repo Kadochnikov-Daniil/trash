@@ -1,0 +1,60 @@
+https://github.com/richfelker/musl-cross-make/blob/master/README.md
+ Там в readme написано как собрать
+
+компиляция
+../musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c
+musl-cross-make/output/bin/riscv64-linux-musl-gcc new_main.c
+
+ ld-musl-riscv64.so.1
+ 
+ qemu-riscv64 -L ../musl/build a.out 
+ 
+ qemu-riscv64 -L myMusl/build a.out 
+ qemu-riscv64 -L muslOriginal/build a.out 
+ 
+ сборка
+ mkdir build
+ ../configure --host=riscv64-linux-gnu
+ make -j4
+ make install DESTDIR='pwd'/root
+ mv lib/libc.so  lib/ld-musl-riscv64.so.1
+
+//qemu-riscv64 -L /usr/riscv64-linux-gnu a.out
+
+riscv64-unknown-elf-objdump -d a.out 
+
+
+tryouts with rounding
+riscv64-linux-gnu-gcc mymain.c myfunc.s
+qemu-riscv64 -L /usr/riscv64-linux-gnu ./a.out
+
+musl-cross-make/output/bin/riscv64-linux-musl-gcc main.c myfunc.S
+musl-cross-make/output/bin/riscv64-linux-musl-gcc mymain.c myfunc.S
+ qemu-riscv64 -L muslOriginal/build a.out 
+ 
+01000000000010010010.000111111011.01010100010001000010.110100011000 PI
+01111111111110000000.000000000000.00000000000000000000.000000000000 NaN
+01111111111100000000.000000000000.00000000000000000000.000000000000 Inf
+11111111111100000000.000000000000.00000000000000000000.000000000000 -inf
+011111111111
+00111111110011001010.110000001000.00110001001001101110.100101111000 0.224
+
+
+
+9221120237041090560
+9218868437227405312
+18442240474082181120
+
+0.224
+0.448 0
+0,896 0
+1,792 1
+1,584 1
+1,168 1
+0,336 0
+0,672 0
+1,344 1
+0,688 0
+1,376 1
+0,752
